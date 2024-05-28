@@ -19,6 +19,7 @@
 #define AVFIX_LED 33
 #define GSFIX_LED 15
 #define GPS_DEBUG false
+#define DEBUG true
 // Queue 
 #define	IMPLEMENTATION	FIFO
 #define QUEUE_SIZE 25
@@ -46,10 +47,10 @@ String gs_gps_lat = "";
 int gs_gps_sat;
 String gs_gps_fix = "";
 //timers
-uint32_t activation_data_timer = millis();
-uint32_t deac_data_timer = millis();
+unsigned long activation_data_timer = millis();
+unsigned long deac_data_timer = millis();
 
-uint32_t gs_gps_timer = millis();
+unsigned long gs_gps_timer = millis();
 
 //State
 //ENSURE State values match the transmit values
@@ -57,7 +58,7 @@ enum ActivationState { INACTIVE = 11, ACTIVATED = 21, A_AWAIT_RESPONSE = 31 } ac
 enum PayloadState { NOT_INITIATED = 12, INITIATED = 22, P_AWAIT_RESPONSE = 32} payload_state;
 enum RocketState{LAUNCH_PAD = 0,LAUNCH = 10,APOGEE = 20,LANDING = 30}rocket_state;
 enum AirbrakesState{NOT_DEPLOYED = 13,DEPLOYED = 23} airbrakes_state;
-
+enum AvGPSState{AV_NOFIX = 14,AV_FIX = 24} av_gps_state;
 
 void setup(){
   Xbee.begin(9600, SERIAL_8N1, 14, 32);
@@ -78,6 +79,8 @@ void setup(){
 
   activation_state = INACTIVE;
   rocket_state = LAUNCH_PAD;
+  av_gps_state = AV_NOFIX;
+  if(DEBUG)Serial.println("DEBUG MODE ON");
 }
 void loop(){
 
@@ -110,21 +113,19 @@ void loop(){
     // DataElement element;
     // strcpy(element.data,xbee_msg,sizeof(element.data)); //FIXME Implement asynchronous or event driven acquisition/sending of data
     //send data to GUI
+    if(DEBUG)Serial.println("Xbee available");
     Serial.println(xbee_msg);
-    Serial.println("HERE1");
     //parse case and set led's
     char c_xbee_msg[MSG_SIZE];
     strncpy(c_xbee_msg, xbee_msg.c_str(), sizeof(c_xbee_msg));
     c_xbee_msg[sizeof(c_xbee_msg) - 1] = '\0'; //ensure null termination
-    Serial.println("HERE2");
     char* xbee_msg_token = strtok(c_xbee_msg,","); //Grabbing first token from message
     if(xbee_msg_token != NULL){ 
-      Serial.println("xbee msg"); 
-      Serial.println(xbee_msg_token);
+      if(DEBUG)Serial.print("xbee msg not null: "); 
+      if(DEBUG)Serial.println(xbee_msg_token);
       if(strcmp(xbee_msg_token,"STATE")==0){
         xbee_msg_token = strtok(NULL,","); //grab next token
         if(xbee_msg_token!=NULL){ //string not empty
-          
           int state_code = atoi(xbee_msg_token);
           Serial.println("state code atoi: ");
           Serial.println(state_code);
@@ -154,10 +155,18 @@ void loop(){
               digitalWrite(APOGEE_LED,HIGH);
               digitalWrite(LAUNCH_LED,LOW);
               break;
-            case LAND_LED:
+            case LANDING:
               rocket_state = LANDING;
               digitalWrite(LAND_LED,HIGH);
               digitalWrite(APOGEE_LED,LOW);
+              digitalWrite(LAUNCH_LED,LOW);
+              break;
+            case AV_FIX:
+              av_gps_state = AV_FIX;
+                if(!digitalRead(AVFIX_LED)){
+                  digitalWrite(AVFIX_LED,HIGH);
+                }         
+              Serial.println("AVIONICS FIX");
               break;
             default:
               String s = "State Code not Recognized:" + state_code;
@@ -170,6 +179,10 @@ void loop(){
           Serial.println("GroundStation Error Parsing State");
         }
       }// end if STATE
+      else{
+        Serial.print("Received unknown message: ");
+        Serial.println(xbee_msg_token);
+      }
     }
     else{
       Serial.println("Xbee_msg_token is null");
