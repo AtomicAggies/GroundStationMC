@@ -114,7 +114,7 @@ void loop(){
     // strcpy(element.data,xbee_msg,sizeof(element.data)); //FIXME Implement asynchronous or event driven acquisition/sending of data
     //send data to GUI
     if(DEBUG)Serial.println("Xbee available");
-    Serial.println(xbee_msg);
+    if(DEBUG)Serial.println(xbee_msg);
     //parse case and set led's
     char c_xbee_msg[MSG_SIZE];
     strncpy(c_xbee_msg, xbee_msg.c_str(), sizeof(c_xbee_msg));
@@ -179,9 +179,25 @@ void loop(){
           Serial.println("GroundStation Error Parsing State");
         }
       }// end if STATE
+      else if (strcmp(xbee_msg_token,"BMP")==0){  //Incoming BMP Data: "BMP," + "Temperature," + "Pressure," + "Altitude," + "ENDDATA";
+        Serial.println("Incoming BMP: temp,press,altitude");
+        Serial.println(xbee_msg);
+        Serial.println("_______________________");
+      }//end if BMP
+      else if (strcmp(xbee_msg_token,"BNO")==0){ //Incoming BNO Data
+        Serial.println("Incoming BNO: pitch,roll,yaw");
+        Serial.println(xbee_msg);
+        Serial.println("_______________________");
+      }// end if BNO
+      else if (strcmp(xbee_msg_token,"GPS")==0){ //Incoming GPS Data
+        Serial.println("Incoming GPS: Hour:Min:Sec,Latitude,Longitude,Speed,Altitude,Geoid Height,ENDDATA");
+        Serial.println(xbee_msg);
+        Serial.println("_______________________");
+      }
       else{
-        Serial.print("Received unknown message: ");
-        Serial.println(xbee_msg_token);
+        Serial.print("Unknown Message: ");
+        Serial.println(xbee_msg);
+        Serial.println("_______________________");
       }
     }
     else{
