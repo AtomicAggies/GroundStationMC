@@ -167,6 +167,7 @@ void loop(){
                   digitalWrite(AVFIX_LED,HIGH);
                 }         
               Serial.println("AVIONICS FIX");
+              Xbee.println("AVFIX");
               break;
             default:
               String s = "State Code not Recognized:" + state_code;
